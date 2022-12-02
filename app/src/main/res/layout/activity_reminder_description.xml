@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+        <!--Data item that holds the reminder details-->
+        <variable
+            name="reminderDataItem"
+            type="com.udacity.project4.locationreminders.reminderslist.ReminderDataItem" />
+    </data>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        tools:context=".locationreminders.ReminderDescriptionActivity">
+
+        <TextView
+            android:id="@+id/title_text"
+            style="@style/reminder_attribute"
+            android:text="@{reminderDataItem.title}"
+            android:textAppearance="@style/TextAppearance.AppCompat.Display1"
+            tools:text="Title" />
+
+        <TextView
+            android:id="@+id/description_text"
+            style="@style/reminder_attribute"
+            android:text="@{reminderDataItem.description}"
+            tools:text="Description" />
+
+        <TextView
+            android:id="@+id/location_text"
+            style="@style/reminder_attribute"
+            android:text="@{reminderDataItem.location}"
+            tools:text="Location" />
+
+        <TextView
+            android:id="@+id/coordinates_text"
+            style="@style/reminder_attribute"
+            android:text="@{@string/lat_long_snippet(reminderDataItem.longitude,reminderDataItem.latitude)}"
+            tools:text="Coordinates" />
+
+    </LinearLayout>
+</layout>
