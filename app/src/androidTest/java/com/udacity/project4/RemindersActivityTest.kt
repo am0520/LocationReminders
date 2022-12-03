@@ -1,9 +1,10 @@
 package com.udacity.project4
 
 import android.app.Application
+import android.util.Log
 import android.view.View
-import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
+import androidx.test.core.app.launchActivity
 import androidx.test.espresso.Espresso
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.IdlingRegistry
@@ -11,7 +12,6 @@ import androidx.test.espresso.action.ViewActions.*
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.RootMatchers.withDecorView
 import androidx.test.espresso.matcher.ViewMatchers.*
-import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.rule.GrantPermissionRule
@@ -24,10 +24,8 @@ import com.udacity.project4.locationreminders.savereminder.SaveReminderViewModel
 import com.udacity.project4.util.DataBindingIdlingResource
 import com.udacity.project4.util.monitorActivity
 import com.udacity.project4.utils.EspressoIdlingResource
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.runTest
 import org.hamcrest.CoreMatchers
 import org.hamcrest.Matchers.not
 import org.junit.After
@@ -54,9 +52,6 @@ class RemindersActivityTest :
 
     // An Idling Resource that waits for Data Binding to have no pending bindings.
     private val dataBindingIdlingResource = DataBindingIdlingResource()
-
-    @get:Rule
-    var activityScenarioRule = ActivityScenarioRule(RemindersActivity::class.java)
 
     @get:Rule
     var backgroundLocationPermission =
@@ -96,14 +91,9 @@ class RemindersActivityTest :
         }
         //Get our real repository
         repository = get()
-
         //clear the data to start fresh
         runBlocking {
             repository.deleteAllReminders()
-        }
-
-        activityScenarioRule.scenario.onActivity { activity ->
-            decorView = activity.window.decorView
         }
     }
 
@@ -128,86 +118,76 @@ class RemindersActivityTest :
 
     @Test
     fun createReminder_checkToast() {
-        val activityScenario = ActivityScenario.launch(RemindersActivity::class.java)
+        launchActivity<RemindersActivity>().use { scenario ->
+            dataBindingIdlingResource.monitorActivity(scenario)
 
-        dataBindingIdlingResource.monitorActivity(activityScenario)
+            scenario.onActivity { activity ->
+                decorView = activity.window.decorView
+            }
 
-        // click add button
-        onView(withId(R.id.addReminderFAB)).perform(click())
-        // type title and description
-        onView(withId(R.id.reminderTitle)).perform(typeText("title"))
-        onView(withId(R.id.reminderDescription)).perform(typeText("description"))
-        // hide keyboard
-        Espresso.closeSoftKeyboard()
-        // click select location
-        onView(withId(R.id.selectLocation)).perform(click())
+            // click add button
+            onView(withId(R.id.addReminderFAB)).perform(click())
+            // type title and description
+            onView(withId(R.id.reminderTitle)).perform(typeText("title"))
+            onView(withId(R.id.reminderDescription)).perform(typeText("description"))
+            // hide keyboard
+            Espresso.closeSoftKeyboard()
+            // click select location
+            onView(withId(R.id.selectLocation)).perform(click())
 
-        // wait for the map to load
-        runBlocking {
-            delay(4000)
+            // wait for the map to load
+            runBlocking {
+                delay(3000)
+            }
+            // pick location
+            onView(withId(R.id.map)).perform(longClick())
+            // tap save
+            onView(withId(R.id.save_button)).perform(click())
+            // tap save reminder
+            onView(withId(R.id.saveReminder)).perform(click())
+            // check toast
+            onView(withText(R.string.reminder_saved)).inRoot(
+                withDecorView(CoreMatchers.not(decorView))
+            ).check(matches(isDisplayed()))
+            // check list screen
+            onView(withText("title")).check(matches(isDisplayed()))
+            onView(withText("description")).check(matches(isDisplayed()))
+            onView(withText(R.string.no_data)).check(matches(not(isDisplayed())))
         }
-        // pick location
-        onView(withId(R.id.map)).perform(longClick())
-
-        runBlocking {
-            delay(1500)
-        }
-        // tap save
-        onView(withId(R.id.save_button)).perform(click())
-        runBlocking {
-            delay(1500)
-        }
-        // tap save reminder
-        onView(withId(R.id.saveReminder)).perform(click())
-        runBlocking {
-            delay(1000)
-        }
-        // check toast
-        onView(withText(R.string.reminder_saved)).inRoot(
-            withDecorView(CoreMatchers.not(decorView))
-        ).check(matches(isDisplayed()))
-
-        onView(withText("title")).check(matches(isDisplayed()))
-        onView(withText("description")).check(matches(isDisplayed()))
-        onView(withText(R.string.no_data)).check(matches(not(isDisplayed())))
-
-        activityScenario.close()
     }
 
     @Test
     fun missTitle_showsTitleErrorSnackBar() {
-        val activityScenario = ActivityScenario.launch(RemindersActivity::class.java)
-        dataBindingIdlingResource.monitorActivity(activityScenario)
+        launchActivity<RemindersActivity>().use { scenario ->
+            dataBindingIdlingResource.monitorActivity(scenario)
 
-        // click add button
-        onView(withId(R.id.addReminderFAB)).perform(click())
-        // tap save reminder
-        onView(withId(R.id.saveReminder)).perform(click())
-        // check snackbar for title error
-        onView(withId(R.id.snackbar_text))
-            .check(matches(withText(R.string.err_enter_title)))
-
-        activityScenario.close()
+            // click add button
+            onView(withId(R.id.addReminderFAB)).perform(click())
+            // tap save reminder
+            onView(withId(R.id.saveReminder)).perform(click())
+            // check snackbar for title error
+            onView(withId(R.id.snackbar_text))
+                .check(matches(withText(R.string.err_enter_title)))
+        }
     }
 
     @Test
     fun missLocation_showsLocationErrorSnackBar() {
-        val activityScenario = ActivityScenario.launch(RemindersActivity::class.java)
-        dataBindingIdlingResource.monitorActivity(activityScenario)
+        launchActivity<RemindersActivity>().use { scenario ->
+            dataBindingIdlingResource.monitorActivity(scenario)
 
-        // click add button
-        onView(withId(R.id.addReminderFAB)).perform(click())
-        // type title and description
-        onView(withId(R.id.reminderTitle)).perform(typeText("title"))
-        onView(withId(R.id.reminderTitle)).perform(typeText("description"))
-        // hide keyboard
-        Espresso.closeSoftKeyboard()
-        // tap save reminder
-        onView(withId(R.id.saveReminder)).perform(click())
-        // check snackbar for location error
-        onView(withId(R.id.snackbar_text))
-            .check(matches(withText(R.string.err_select_location)))
-
-        activityScenario.close()
+            // click add button
+            onView(withId(R.id.addReminderFAB)).perform(click())
+            // type title and description
+            onView(withId(R.id.reminderTitle)).perform(typeText("title"))
+            onView(withId(R.id.reminderDescription)).perform(typeText("description"))
+            // hide keyboard
+            Espresso.closeSoftKeyboard()
+            // tap save reminder
+            onView(withId(R.id.saveReminder)).perform(click())
+            // check snackbar for location error
+            onView(withId(R.id.snackbar_text))
+                .check(matches(withText(R.string.err_select_location)))
+        }
     }
 }

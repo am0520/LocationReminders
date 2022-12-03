@@ -91,10 +91,9 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
     * Initialize permission launchers and handle request responses
     * */
     private fun initLaunchers() {
+        // Check if device location has been enabled
         settingsLauncher = registerForActivityResult(StartIntentSenderForResult()) { result ->
-            if (result.resultCode == RESULT_OK)
-                enableLocation()
-            else
+            if (result.resultCode != RESULT_OK)
                 showLocationSettingsSnackbar()
         }
 
@@ -104,7 +103,7 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
 
             if (granted) {
                 // If granted check if location setting is enabled on device
-                checkLocationSettings()
+                enableLocation()
             } else {
                 // Check if we are in a state where the user has denied the permission and
                 // selected Don't ask again
@@ -128,7 +127,7 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
     }
 
     /*
-    * Checks for foreground and background permissions and request them if not granted
+    * Checks for foreground permissions and request them if not granted
     * */
     private fun checkLocationPermission() {
         // If foreground permissions are denied
@@ -140,19 +139,14 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
                 // No explanation needed, we can request the permission.
                 requestForegroundLocationPermission()
             }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
-            !isBackgroundLocationGranted()
-        ) {
-            // If foreground location accessed, request background (on API 29+)
-            requestBackgroundLocationPermission()
         } else {
             // If all permissions are enabled
-            checkLocationSettings()
+            enableLocation()
         }
     }
 
     /*
-    * Check for foreground and background permissions
+    * Check for foreground permissions
     * */
     private fun isForegroundLocationGranted(): Boolean {
         // Check if foreground permissions (Fine and Coarse) are granted
@@ -169,24 +163,6 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
     }
 
     /*
-    * Check if background permission is granted
-    * */
-    @RequiresApi(Build.VERSION_CODES.Q)
-    private fun isBackgroundLocationGranted() =
-        PackageManager.PERMISSION_GRANTED ==
-                ActivityCompat.checkSelfPermission(
-                    requireContext(), Manifest.permission.ACCESS_BACKGROUND_LOCATION
-                )
-
-    /*
-    * Request background location permission
-    * */
-    @RequiresApi(Build.VERSION_CODES.Q)
-    private fun requestBackgroundLocationPermission() {
-        permissionsLauncher.launch(arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
-    }
-
-    /*
     * Request foreground location permissions
     * */
     private fun requestForegroundLocationPermission() {
@@ -198,13 +174,26 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
         )
     }
 
-    /*
-    * Enable current location and zoom camera to it
-    * */
     @SuppressLint("MissingPermission")
     private fun enableLocation() {
         map.isMyLocationEnabled = true
 
+        viewCurrentPosition()
+
+        hintUser()
+
+        // Check if device location is on when My Location button is tapped
+        map.setOnMyLocationButtonClickListener {
+            checkLocationSettings()
+            false
+        }
+    }
+
+    /*
+    *  Zoom camera to current location
+    * */
+    @SuppressLint("MissingPermission")
+    private fun viewCurrentPosition() {
         fusedLocationProviderClient.lastLocation.addOnSuccessListener { location ->
             location?.let {
                 // Update map camera on user current location
@@ -234,8 +223,6 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
         val client: SettingsClient = LocationServices.getSettingsClient(requireContext())
         val task: Task<LocationSettingsResponse> = client.checkLocationSettings(builder.build())
 
-        task.addOnSuccessListener { enableLocation() }
-
         // Location setting is not enabled on the device
         task.addOnFailureListener { exception ->
             if (exception is ResolvableApiException) {
@@ -249,8 +236,6 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
                 showLocationSettingsSnackbar()
             }
         }
-
-        task.addOnCompleteListener { hintUser() }
     }
 
     /*
