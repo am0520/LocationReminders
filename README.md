@@ -13,9 +13,9 @@ _[Directions to get a Google Maps API key](https://developers.google.com/maps/do
 <br>
 _You can add your API key in [google_maps_api.xml string resource](app/src/debug/res/values/google_maps_api.xml)_
 
-The app lets user save a reminder by entering a title, optional description, and a location via Google map.
-Permission is asked initially for current location and when current location icon is tapped, but not mandatory.
-Constant location access is then asked for geofencing by opening device settings and notifying user when proceding without the permission.
+The app lets the user save a reminder by entering a title, optional description, and a location via Google map.
+Permission is asked initially for the current location and the when current location icon is tapped, but not mandatory.
+Constant location access is then asked for geofencing by opening device settings and notifying the user when proceeding without the permission.
 
 Topics:
 - Google Maps API
